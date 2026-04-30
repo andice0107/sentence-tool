@@ -1,598 +1,356 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  Settings, 
-  History, 
-  Dices, 
-  Sparkles, 
-  RotateCcw,
-  BookOpen,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp,
-  ListRestart,
-  Maximize2,
-  Plus,
-  Trash2,
-  Edit3,
-  Layout,
-  Type,
-  HelpCircle,
-  X
-} from 'lucide-react';
-
-const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
-
-// --- 初始資料庫 ---
-const INITIAL_RAW_DATA = {
-  "什麼人物": "大雄##胖虎##靜香##哆拉A夢##小夫##爸爸##媽媽##爺爺##奶奶##外公##外婆##警察##老師##老闆##店員##廚師##志工##市長##總統##皮卡丘##小智##阿奇##王叔叔##阿姨##姑姑##姑丈##司機##校長##主任##同學##姨丈##伯父##伯母##舅舅##舅媽##導護老師##消防員##郵差##學生##清潔人員##救生員##教練##教授##運動選手##畫畫老師##魔術師##醫生##護士##農夫##漁夫##外送員##送貨員##銀行銀員##工程師##歌手##訓獸師##外星人##太空人##機長##火車站長##哆啦美##胖虎媽媽##大雄爸爸##靜香媽媽##靜香爸爸##出木杉##技安妹##鄰居神成先生##記者##律師##藥師##攝影師##保全人員##救護員##維修人員##圖書館員##園丁##服務生##導遊##機車行老闆##漫畫家##模特兒##裁判##救難隊員##魔術師助理##太空總署署員##航海家##登山客##探險家##考古學家",
-  "什麼時間": "早上##放學後##吃飽後##上學路上##下午##晚上##黃昏##清晨##看書時##看電影時##運動時##寫作業時##看電視時##聊天時##上課時##下課時##工作時##開會時##搭車時##搭飛機時##搭船時##睡覺時##買菜時##逛街時##煮飯時##看醫生時##掃地時##開車時##騎腳踏車時##寫作業時##洗衣服時##寫完作業時##搭車後##運動後##買完東西後##游完泳後##被處罰後##鐘響時##看到流星時##上完廁所後##發生意外時##考完試後##午覺醒來時##日落後##半夜##黎明時分##補習前##領獎時##表演前##比賽中##午餐時間##晚餐後##點心時間##發考卷時##倒垃圾時##整理房間時##澆花時##洗澡後##刷牙時##換衣服時##拍照時##講電話時##發呆時##許願時##慶生時##搬家後##出國時##野餐後##中秋節時##過年期間",
-  "什麼地點": "公園##操場##馬路上##學校##教室##便利商店##餐廳##停車場##電梯裡##公車上##火車上##飛機上##船上##海邊##橋上##馬路邊##天上##地上##日本##北極##動物園##捷運站##醫院##診所##書店##文具行##植物園##昆蟲館##貓熊館##企鵝館##博物館##水族館##圖書館##浴室##廚房##廁所##辦公室##遊樂園##溜冰場##籃球場##足球場##飛機場##美術館##公車站##人行道上##頂樓##地下室##玄關##陽台##頂樓花園##百貨公司##電影院##體育館##健身房##游泳池##滑板場##露營區##山頂##森林裡##溪邊##農場##果園##牧場##加工廠##警察局##消防局##郵局##銀行##理髮店##加油站##便利商店門口##火車月台上##捷運車廂內##垃圾場##科博館",
-  "什麼動作": "舉手##吐舌頭##拿##喝##吹##噴##推##踩##轉##按##拍##看##聽##聞##摸##嚐##黏貼##刮##戳##打開##關閉##欣賞##參觀##閱讀##建造##組裝##切割##收取##綁##掛##抽##修理##清潔##搜尋##盛裝##種植##挖掘##解釋##發放##提取##儲存##撥打##挑選##摺疊##旋轉##按壓##拍打##嗅聞##品嚐##剪裁##黏合##編織##修剪##捕捉##瞄準##點擊##拖動##傳遞##丟擲##阻擋##迎接##道別##擁抱##握手##揮動##測量##計算##翻譯##修正##提醒##紀錄",
-  "什麼事情": "扮鬼臉##看書##跑步##野餐##睡覺##騎車##開車##煮菜##畫畫##寫作業##複習作業##跳繩##喝水##吃飯##掃地##看電視##烤肉##划船##吃水果##包水餃##煮泡麵##玩飛盤##丟球##游泳##踢球##打羽球##打桌球##打網球##打電玩##看星星##看風景##逛街##洗碗##洗衣服##看醫生##排隊##看電影##化妝##洗車##種田##開會##上網##打電話##堆樂高##玩拼圖##溜滑梯##盪鞦韆##玩捉迷藏##吹泡泡##放風箏##溜冰##攀岩##跳舞##唱歌##彈鋼琴##拉小提琴##寫書法##剪紙##做美勞##摺紙##種花##餵魚##澆水##整理書包##摺衣服##擺餐具##資源回收##看漫畫##玩桌遊##聽音樂##講笑話##變魔術##觀察昆蟲",
-  "什麼物品": "保溫瓶##餐具##平板##手機##電腦##鉛筆##滑鼠##橡皮擦##直尺##筆袋##繪本##電視##電玩##桌遊##籃球##桌球##躲避球##羽毛球##足球##泳鏡##泳帽##書包##課本##錢包##剪刀##碗##湯匙##鑰匙##喇叭##帽子##衛生紙##鞋子##襪子##聖誕襪##卡片##紙鈔##椅子##眼鏡##手錶##筷子##原子筆##吊飾##滅火器##充電器##搖控器##膠水##水壺##不鏽鋼碗##筆記本##墊板##色鉛筆##彩色筆##水彩筆##剪貼簿##膠水##膠帶##訂書機##迴紋針##資料夾##悠遊卡##學生證##雨傘##雨衣##小風扇##暖暖包##行動電源##平板電腦##耳機##錄音筆##地球儀##望遠鏡##顯微鏡##指南針##手電筒##帆布袋##便當袋",
-  "為何理由": "為了慶祝##因為口渴##由於好奇##為了健康##因為生氣##由於害怕##為了比賽##因為想念##由於寒冷##為了省錢##因為肚子餓##由於無聊##為了禮貌##因為心急##由於緊張##為了安全##因為感動##由於下雨##為了環保##興奮##由於懶惰##為了夢想##因為難過##由於疲倦##為了工作##因為有趣##由於害羞##為了減肥##因為失眠##由於地震##為了方便##因為遺忘##由於生病##為了和平##因為誤會##由於驚訝##為了學習##因為認真##由於噪音##為了正義##因為貪玩##由於分心##為了放鬆##因為著急##由於停電##為了求救##因為太熱##由於風大##為了團聚##因為體貼##由於反省",
-  "如何狀態": "非常緩慢地##極其迅速地##十分用力地##輕輕柔柔地##安安靜靜地##漫不經心地##專心致志地##滿頭大汗地##小心翼翼地##慌慌張張地##手忙腳亂地##興高采烈地##垂頭喪氣地##沒精打采地##大搖大擺地##隨隨便便地##仔仔細細地##客客氣氣地##沒完沒了地##斷斷續續地##理直氣壯地##千辛萬苦地##毫不猶豫地##目不轉睛地##全神貫注地##馬蹄不停地##心滿意足地##跌跌撞撞地##結結巴巴地##連滾帶爬地##大聲疾呼地##偷偷摸摸地##不甘示弱地##若無其事地##慢條斯理地##急急忙忙地##規規矩矩地##誠誠懇懇地##戰戰兢兢地##實實在在地##精益求精地##不慌不忙地##歪歪斜斜地##整整齊齊地##馬馬虎虎地##穩穩當當地##斷斷續續地##三心二意地##一心一意地##各式各樣地",
-  "心情感受": "興奮愉快##難過憂傷##怒火中燒##膽戰心驚##欣喜若狂##悶悶不樂##心花怒放##忐忑不安##垂頭喪氣##驚喜交加##滿心期待##無比沮喪##哭笑不得##心滿意足##驚魂未定##充滿信心##精疲力竭##樂不可支##心急如焚##感動萬分##羞愧難當##氣憤難平##平靜安詳##驚訝無比##幸福美滿##手足無措##自在輕鬆##百感交集##疑慮重重##充滿希望##心灰意冷##萬分懊惱##依依不捨##焦慮不安##喜出望外##心懷感激##孤單寂寞##憤憤不平##大吃一驚##悲痛欲絕##滿腔怒火##洋洋得意##提心吊膽##安然自得##悶悶不樂##心不在焉##緊張萬分##欣慰不已##委屈難過##煩躁不安##開心##難過##生氣##害怕##驚訝##得意##委屈##害羞##著急##煩惱##擔心##興奮##憂愁##慚愧##反省##感動##滿足##平靜##懊悔##厭惡##緊張##欣慰##矛盾##空虛##寂蹤##無助##焦慮##懷疑##心碎##痛快##很開心##不耐煩##好驚訝##超興奮##真難過##極失望##超爽快##有點累##滿心喜##好委屈##好生氣##太感動##不甘心##嚇一跳##心暖暖##冷冰冰##熱騰騰##心驚驚##好寂寞##真平靜",
-  "個性特質": "活潑開朗##沉默寡言##誠實信用##勇敢果決##溫柔體貼##勤奮好學##樂於助人##善良大方##嚴謹認真##自信積極##自私自利##頑固執著##膽小怕事##多才多藝##謙虛有禮##幽默風趣##剛正不阿##優柔寡斷##急性子##慢吞吞##粗心大意##細心周到##公正無私##熱情奔放##冷靜沉著##剛毅木訥##足智多謀##狡猾多端##懶惰散漫##自負傲慢##平易近人##豁達大度##優雅高貴##樸實無華##孤僻怪異##固執己見##隨和親切##忠厚老實##精明能幹##見義勇為##溫和儒雅##叛逆好勝##老成持重##幼稚天真##內向害羞##外向活潑##追求完美##得過且過##剛強不屈##謹慎小心##勇敢##誠實##善良##大方##勤勞##懶惰##內向##外向##自私##虛偽##慷慨##小氣##溫柔##暴躁##害羞##愛笑##愛玩##好學##固執##隨和##活潑##樂觀##悲觀##幽默##嚴肅##冷靜##熱情##粗心##細心##頑皮##愛搗蛋##愛說話##慢吞吞##急驚風##沒耐心##很認真##很勇敢##超聰明##好大方##愛幫忙##脾氣好##真踏實##肯負責##好奇心##愛鑽研##不合群##夠義氣##講道理##有禮貌##不服輸",
-  "AA疊詞": "大大##小小##快快##慢慢##重重##輕輕##長長##短短##高高##矮矮##冰冰##熱熱##溫溫##涼涼##冷冷##軟軟##硬硬##黑黑##默默##層層##藍藍##白白##黃黃##紅紅##綠綠##紫紫##灰灰##霧霧##歪歪##好好##笑笑##天天##看看##想想##坐坐##走走##說說##喝喝##拍拍##摸摸##寫寫##打打##聽聽##濃濃##厚厚##簿鋪##洗洗##擦擦##等等##吹吹##細細##粗粗##甜甜##苦苦##酸酸##辣辣##鹹鹹##香香##臭臭##嫩嫩##脆脆##滑滑##油油##亮亮##暗暗##圓圓##方方##尖尖##平平##久久##遠遠##近近##處處##時時##種種##片片##朵朵##雙雙##對對##件件##個個##排排",
-  "AAB疊詞": "毛毛雨##洗洗手##刷刷牙##洗洗頭##洗洗碗##打打球##拍拍球##寫寫字##哈哈笑##微微笑##咪咪笑##團團轉##汪汪叫##呱呱叫##吱吱叫##碎碎念##咚咚響##叮叮噹##飄飄然##憤憤然##茫茫然##冰冰涼##看看報##讀讀書##聊聊天##天天講##說說話##悄悄話##談談心##散散心##散散步##見見面##跳跳舞##扭扭腰##蹦賓跳##唱唱歌##喝喝水##吃吃飯##解解饞##點點頭##吹吹頭##吹吹風##搖搖頭##點點頭##擦擦臉##眨眨眼##招招手##揮揮手##動動手##剛剛好##天天講##悄悄話##排排坐##啦啦隊##泡泡糖##幫幫忙##過過癮##娃娃魚##過山車##蹺蹺板##呼呼睡##毛毛蟲##噴噴水##拍拍手##扭扭頭##轉轉脖##踏踏地##招招手##踢踢腿##揮揮衣##排排隊##疊疊樂##悄悄話##看看書##聽聽歌##寫寫畫##塗塗抹##整整理##洗洗臉##泡泡澡##燙燙衣##剪紙##貼貼布##跳跳繩##溜溜球##閃閃亮##晶晶亮##明明亮##嘿嘿笑##呵呵笑##哼哼唱",
-  "ABB疊詞": "紅通通##白茫茫##灰濛濛##綠油油##黃澄澄##白皚皚##黑乎乎##血淋淋##濕漉漉##冷冰冰##熱乎乎##火辣辣##暖烘烘##香噴噴##孤零零##惡狠狠##傻乎乎##氣呼呼##氣鼓鼓##氣沖沖##笑眯眯##笑嘻嘻##笑呵呵##笑哈哈##頂呱呱##鬧哄哄##輕飄飄##酸溜溜##沉甸甸##乾巴巴##皺巴巴##空蕩蕩##嬌滴滴##水汪汪##淚汪汪##亮晃晃##金燦燦##黑漆漆##黑黝黝##亮晶晶##明晃晃##藍盈盈##紅撲撲##乾淨淨##亂糟糟##胖嘟嘟##圓滾滾##肉墩墩##直勾勾##甜絲絲##苦澀澀##辣酥酥##麻酥酥##靜悄悄##輕飄飄##軟綿綿##硬邦邦##脆生生##滑溜溜##油漬漬"
-};
-
-const COLOR_MAP = {
-  "什麼人物": "bg-[#ffe4e1] border-[#ffc1c1] text-red-900",
-  "什麼時間": "bg-[#e3f2fd] border-[#bbdefb] text-blue-900",
-  "什麼地點": "bg-[#fce4ec] border-[#f8bbd0] text-pink-900",
-  "什麼動作": "bg-[#b8860b] border-[#926b09] text-white",
-  "什麼事情": "bg-[#fff3e0] border-[#ffe0b2] text-orange-900",
-  "什麼物品": "bg-[#ffe0b2] border-[#ffcc80] text-orange-950",
-  "為何理由": "bg-[#f3e5f5] border-[#e1bee7] text-purple-900",
-  "如何狀態": "bg-[#e8f5e9] border-[#c8e6c9] text-emerald-900",
-  "心情感受": "bg-[#e8eaf6] border-[#c5cae9] text-indigo-900",
-  "個性特質": "bg-[#e0f2f1] border-[#b2dfdb] text-teal-900",
-  "AA疊詞": "bg-slate-100 border-slate-200 text-slate-900",
-  "AAB疊詞": "bg-slate-200 border-slate-300 text-slate-950",
-  "ABB疊詞": "bg-slate-300 border-slate-400 text-black",
-};
-
-export default function App() {
-  // --- 核心資料狀態 ---
-  const [dataStore, setDataStore] = useState(() => {
-    return Object.entries(INITIAL_RAW_DATA).reduce((acc, [key, value]) => {
-      acc[key] = [...new Set(value.split('##'))];
-      return acc;
-    }, {});
-  });
-
-  const [visibleCategories, setVisibleCategories] = useState(["什麼人物", "什麼時間", "什麼地點", "什麼動作", "什麼事情", "什麼物品"]);
-  const [currentResults, setCurrentResults] = useState({}); 
-  const [histories, setHistories] = useState(Object.keys(INITIAL_RAW_DATA).reduce((acc, k) => ({...acc, [k]: []}), {}));
-  const [allowRepeat, setAllowRepeat] = useState(false);
-  const [drawMode, setDrawMode] = useState('random'); 
-  const [sentencePattern, setSentencePattern] = useState(""); 
-  
-  // API 金鑰從 localStorage 讀取
-  const [userApiKey, setUserApiKey] = useState(localStorage.getItem('gemini_api_key') || "");
-
-  const [showHistoryModal, setShowHistoryModal] = useState(null); 
-  const [showSettings, setShowSettings] = useState(false);
-  const [showDataEditor, setShowDataEditor] = useState(false); 
-  const [editingCategory, setEditingCategory] = useState(null); 
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [isAiDrawing, setIsAiDrawing] = useState(false);
-  const [aiSentence, setAiSentence] = useState("");
-  const [isInstructorOpen, setIsInstructorOpen] = useState(false);
-  const [showHelpTooltip, setShowHelpTooltip] = useState(false);
-
-  // 當金鑰改變時同步存入儲存空間
-  useEffect(() => {
-    localStorage.setItem('gemini_api_key', userApiKey);
-  }, [userApiKey]);
-
-  // --- 內部邏輯函數 ---
-  const isExhausted = (category) => {
-    if (allowRepeat) return false;
-    const historyCount = histories[category]?.length || 0;
-    const totalCount = dataStore[category]?.length || 0;
-    return historyCount >= totalCount && totalCount > 0;
-  };
-
-  const drawSingle = (category) => {
-    const pool = dataStore[category] || [];
-    const history = histories[category] || [];
-    
-    let available = allowRepeat 
-      ? pool 
-      : pool.filter(item => !history.includes(item));
-
-    if (available.length === 0) return null;
-
-    const randomIndex = Math.floor(Math.random() * available.length);
-    const result = available[randomIndex];
-
-    setCurrentResults(prev => ({ ...prev, [category]: result }));
-    setHistories(prev => ({
-      ...prev,
-      [category]: [...(prev[category] || []), result]
-    }));
-    return result;
-  };
-
-  const resetCategory = (category) => {
-    setHistories(prev => ({ ...prev, [category]: [] }));
-    setCurrentResults(prev => {
-      const next = {...prev};
-      delete next[category];
-      return next;
-    });
-  };
-
-  const handleDrawAll = async () => {
-    if (drawMode === 'random') {
-      visibleCategories.forEach(k => drawSingle(k));
-    } else {
-      if (!userApiKey) {
-        setAiSentence("請先點擊設定（⚙️）填寫 API 金鑰。");
-        setIsInstructorOpen(true);
-        return;
-      }
-      setIsAiDrawing(true);
-      try {
-        const activeKeys = visibleCategories;
-        const exclusionList = activeKeys.reduce((acc, k) => {
-          if (!allowRepeat && histories[k]?.length > 0) acc[k] = histories[k];
-          return acc;
-        }, {});
-
-        const isPattern = drawMode === 'pattern' && sentencePattern.trim();
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>造句靈感抽卡器</title>
+    <!-- 載入 React 核心庫 -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 載入 Babel 編譯器 (讓瀏覽器能直接執行 JSX) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- 載入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 載入 Lucide 圖示庫 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .animate-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        const systemPrompt = `你是一個資長的寫作指導老師。分類包含：${activeKeys.join(', ')}。請幫我挑選詞彙。
-        規則：
-        1. 只能從提供的分類中選詞。
-        2. 輸出格式為 JSON：{"標籤": "詞彙"}。
-        3. ${!allowRepeat ? `排除已抽過的詞：${JSON.stringify(exclusionList)}` : '可重複。'}
-        4. ${isPattern ? `【重要】本次抽詞必須考慮到「${sentencePattern}」這個句型。請選出最適合放入此句型中的詞。` : '請選出合理且有生活感的組合。'}`;
+        /* Tooltip 說明視窗樣式 */
+        .tooltip-box {
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.2s ease-in-out;
+            transform: translateY(5px);
+        }
+        .tooltip-trigger:hover .tooltip-box {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
-        const userPrompt = `請挑選：\n${activeKeys.map(k => `${k}: [${(dataStore[k] || []).join(', ')}]`).join('\n')}`;
+    <script type="text/babel">
+        // 這裡絕對沒有 import 語句
+        const { useState, useEffect, useMemo, useRef } = React;
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${userApiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: userPrompt }] }],
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            generationConfig: { responseMimeType: "application/json" }
-          })
-        });
+        // 穩定的圖示渲染組件
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const [svg, setSvg] = useState('');
+            useEffect(() => {
+                if (window.lucide && window.lucide.icons[name]) {
+                    const iconData = window.lucide.icons[name];
+                    const content = iconData.map(([tag, attrs]) => {
+                        const attrStr = Object.entries(attrs).map(([k, v]) => `${k}="${v}"`).join(' ');
+                        return `<${tag} ${attrStr}></${tag}>`;
+                    }).join('');
+                    setSvg(content);
+                }
+            }, [name]);
 
-        const data = await response.json();
-        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-        const result = JSON.parse(responseText);
+            return (
+                <svg
+                    width={size}
+                    height={size}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={className}
+                    dangerouslySetInnerHTML={{ __html: svg }}
+                />
+            );
+        };
 
-        const newResults = { ...currentResults };
-        const newHistories = { ...histories };
+        const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
 
-        activeKeys.forEach(k => {
-          if (result[k]) {
-            if (!allowRepeat && (histories[k] || []).includes(result[k])) {
-              drawSingle(k);
-            } else {
-              newResults[k] = result[k];
-              newHistories[k] = [...(newHistories[k] || []), result[k]];
-            }
-          }
-        });
+        const INITIAL_RAW_DATA = {
+            "什麼人物": "大雄##胖虎##靜香##哆拉A夢##小夫##爸爸##媽媽##爺爺##奶奶##外公##外婆##警察##老師##老闆##店員##廚師##志工##市長##總統##皮卡丘##小智##阿奇##王叔叔##阿姨##姑姑##姑丈##司機##校長##主任##同學##姨丈##伯父##伯母##舅舅##舅媽##導護老師##消防員##郵差##學生##清潔人員##救生員##教練##教授##運動選手##畫畫老師##魔術師##醫生##護士##農夫##漁夫##外送員##送貨員##銀行銀員##工程師##歌手##訓獸師##外星人##太空人##機長##火車站長##哆啦美##胖虎媽媽##大雄爸爸##靜香媽媽##靜香爸爸##出木杉##技安妹##鄰居神成先生##記者##律師##藥師##攝影師##保全人員##救護員##維修人員##圖書館員##園丁##服務生##導遊##機車行老闆##漫畫家##模特兒##裁判##救難隊員##魔術師助理##太空總署署員##航海家##登山客##探險家##考古學家",
+            "什麼時間": "早上##下午##晚上##看書時##放學後##吃飽後##上學路上##清晨##半夜##午餐時間##慶生時##寫作業時##看電視時##比賽中",
+            "什麼地點": "公園##操場##教室##餐廳##公車上##火車上##飛機上##海邊##圖書館##博物館##書店##捷運站##動物園",
+            "什麼動作": "舉手##吐舌頭##喝##吹##拍##看##聽##聞##摸##欣賞##修復##挖掘##紀錄##握手##揮動",
+            "什麼事情": "扮鬼臉##跑步##野餐##煮菜##畫畫##跳繩##看電視##打球##玩遊戲##觀察昆蟲##剪紙##寫書法",
+            "什麼物品": "保溫瓶##平板##手機##電腦##鉛筆##書包##錢包##眼鏡##手錶##悠遊卡##望遠鏡##指南針",
+            "為何理由": "為了慶祝##因為口渴##由於好奇##為了健康##因為生氣##由於害怕##為了比賽##為了夢想##為了環保",
+            "如何狀態": "非常緩慢地##極其迅速地##十分用力地##安安靜靜地##專心致志地##滿頭大汗地##小心翼翼地##誠誠懇懇地",
+            "心情感受": "興奮愉快##難過憂傷##怒火中燒##欣喜若狂##忐忑不安##驚喜交加##感動萬分##滿腔怒火",
+            "個性特質": "活潑開朗##溫柔體貼##勤奮好學##善良大方##剛正不阿##見義勇為##追求完美",
+            "AA疊詞": "大大##小小##快快##慢慢##冰冰##熱熱##涼涼##白白##紅紅##綠綠##亮亮##暗暗",
+            "AAB疊詞": "毛毛雨##洗洗手##刷刷牙##洗洗臉##點點頭##招招手##聊聊天##看看書",
+            "ABB疊詞": "紅通通##白茫茫##綠油油##涼冰冰##熱乎乎##香噴噴##胖嘟嘟##氣呼呼##笑瞇瞇"
+        };
 
-        setCurrentResults(newResults);
-        setHistories(newHistories);
-      } catch (error) {
-        visibleCategories.forEach(k => drawSingle(k));
-      } finally {
-        setIsAiDrawing(false);
-      }
-    }
-  };
+        const COLOR_MAP = {
+            "什麼人物": "bg-[#ffe4e1] border-[#ffc1c1] text-red-900",
+            "什麼時間": "bg-[#e3f2fd] border-[#bbdefb] text-blue-900",
+            "什麼地點": "bg-[#fce4ec] border-[#f8bbd0] text-pink-900",
+            "什麼動作": "bg-[#b8860b] border-[#926b09] text-white",
+            "什麼事情": "bg-[#fff3e0] border-[#ffe0b2] text-orange-900",
+            "什麼物品": "bg-[#ffe0b2] border-[#ffcc80] text-orange-950",
+            "為何理由": "bg-[#f3e5f5] border-[#e1bee7] text-purple-900",
+            "如何狀態": "bg-[#e8f5e9] border-[#c8e6c9] text-emerald-900",
+            "心情感受": "bg-[#e8eaf6] border-[#c5cae9] text-indigo-900",
+            "個性特質": "bg-[#e0f2f1] border-[#b2dfdb] text-teal-900",
+            "AA疊詞": "bg-slate-50 border-slate-200 text-slate-900",
+            "AAB疊詞": "bg-slate-100 border-slate-300 text-slate-950",
+            "ABB疊詞": "bg-slate-200 border-slate-400 text-black",
+        };
 
-  const generateSentence = async () => {
-    if (Object.keys(currentResults).length === 0) return;
-    if (!userApiKey) {
-      setAiSentence("請先點擊右上角設定（⚙️）填寫 API 金鑰才能造句。");
-      setIsInstructorOpen(true);
-      return;
-    }
-    setIsAiLoading(true);
-    setAiSentence("");
-    setIsInstructorOpen(true);
-
-    try {
-      const words = Object.entries(currentResults)
-        .filter(([k]) => visibleCategories.includes(k))
-        .map(([k, v]) => `${k}: ${v}`)
-        .join(', ');
-
-      const isPattern = drawMode === 'pattern' && sentencePattern.trim();
-
-      const prompt = `請利用以下語詞造句：\n${words}\n\n規則：
-      1. 所有語詞必須完整出現。
-      2. 句子要生活化且通順。
-      3. 【重要】禁止使用「**」或「__」等任何符號標示語詞。直接輸出純文字句子。
-      ${isPattern ? `4. 【絕對必須】使用指定的句型結構：「${sentencePattern}」。造出的句子必須完全符合這個架構。` : ''}`;
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${userApiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      });
-
-      const data = await response.json();
-      const output = data.candidates?.[0]?.content?.parts?.[0]?.text || "造句失敗。";
-      setAiSentence(typeof output === 'string' ? output : JSON.stringify(output));
-    } catch (error) {
-      setAiSentence("造句失敗，請稍後再試。");
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
-
-  // --- 標示語詞輔助函數 ---
-  const renderHighlightedSentence = (sentence) => {
-    if (!sentence) return null;
-    const cleanSentence = sentence.replace(/(\*\*|__)/g, '');
-    const keywords = visibleCategories
-      .map(cat => currentResults[cat])
-      .filter(Boolean)
-      .sort((a, b) => b.length - a.length);
-
-    if (keywords.length === 0) return cleanSentence;
-    const regex = new RegExp(`(${keywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g');
-    const parts = cleanSentence.split(regex);
-
-    return parts.map((part, i) => {
-      if (keywords.includes(part)) {
-        return (
-          <span 
-            key={i} 
-            className="text-indigo-600 underline underline-offset-8 decoration-indigo-300 decoration-2 font-black mx-1"
-          >
-            {part}
-          </span>
-        );
-      }
-      return part;
-    });
-  };
-
-  // --- 資料編輯 ---
-  const handleAddCategory = () => {
-    const name = window.prompt("請輸入新類型的名稱：");
-    if (name && !dataStore[name]) {
-      setDataStore(prev => ({ ...prev, [name]: [] }));
-      setHistories(prev => ({ ...prev, [name]: [] }));
-      setVisibleCategories(prev => [...prev, name]);
-    }
-  };
-
-  const handleRemoveCategory = (name) => {
-    if (window.confirm(`確定要刪除「${name}」整個類型嗎？`)) {
-      const next = { ...dataStore };
-      delete next[name];
-      setDataStore(next);
-      setVisibleCategories(prev => prev.filter(v => v !== name));
-    }
-  };
-
-  const handleUpdateWords = (name, rawString) => {
-    const words = [...new Set(rawString.split('\n').map(s => s.trim()).filter(s => s))];
-    setDataStore(prev => ({ ...prev, [name]: words }));
-  };
-
-  // --- 動態樣式 ---
-  const cardGridClass = useMemo(() => {
-    const count = visibleCategories.length;
-    if (count <= 4) return "grid-cols-1 sm:grid-cols-2";
-    if (count <= 6) return "grid-cols-2 sm:grid-cols-3";
-    if (count <= 9) return "grid-cols-3 sm:grid-cols-4";
-    return "grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6";
-  }, [visibleCategories]);
-
-  const cardFontSize = useMemo(() => {
-    const count = visibleCategories.length;
-    if (count <= 6) return "text-2xl sm:text-4xl";
-    if (count <= 9) return "text-xl sm:text-2xl";
-    return "text-lg sm:text-xl";
-  }, [visibleCategories]);
-
-  return (
-    <div className="flex flex-col h-screen bg-[#f8fafc] text-slate-800 font-sans overflow-hidden">
-      
-      {/* 頂部導覽列 */}
-      <header className="bg-white border-b px-6 py-3 flex items-center justify-between shadow-sm z-30 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="bg-indigo-600 p-2 rounded-2xl text-white shadow-indigo-100 shadow-xl">
-            <BookOpen size={24} />
-          </div>
-          <div>
-            <h1 className="text-xl font-black tracking-tight text-slate-900 leading-none mb-1">造句靈感抽卡器</h1>
-            <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Sentence Creative Lab</p>
-          </div>
-          
-          <div className="relative ml-2">
-            <button 
-              onMouseEnter={() => setShowHelpTooltip(true)} 
-              onMouseLeave={() => setShowHelpTooltip(false)}
-              className="p-1 text-slate-300 hover:text-indigo-500 transition-colors"
-            >
-              <HelpCircle size={20} />
-            </button>
-            {showHelpTooltip && (
-              <div className="absolute top-10 left-0 w-72 bg-slate-800 text-white p-5 rounded-2xl text-xs z-[100] shadow-2xl pointer-events-none animate-in fade-in zoom-in duration-200 border border-slate-700">
-                <h4 className="font-black mb-3 text-sm border-b border-slate-600 pb-2 flex items-center gap-2">
-                  <Sparkles size={14} className="text-yellow-400" /> 工具使用說明
-                </h4>
-                <ul className="space-y-2.5 opacity-90 leading-relaxed">
-                  <li className="flex gap-2"><span>1.</span> 點擊卡片底部的「DRAW」可單獨抽取。</li>
-                  <li className="flex gap-2"><span>2.</span> 「一鍵全抽」可快速抽取所有顯示卡片。</li>
-                  <li className="flex gap-2"><span>3.</span> 「合理情境」模式：AI 會挑選邏輯連貫組合。</li>
-                  <li className="flex gap-2"><span>4.</span> 「指定句型」：輸入特定句法，造句受限。</li>
-                  <li className="flex gap-2"><span>5.</span> 點擊「📐」自定義類型、語詞。</li>
-                  <li className="flex gap-2"><span>6.</span> 點擊「⚙️」設定重複抽出與填寫 API 金鑰。</li>
-                </ul>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="hidden lg:flex items-center gap-3 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 shadow-inner">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">抽卡模式</span>
-            <div className="flex gap-1">
-              {['random', 'logical', 'pattern'].map(mode => (
-                <button 
-                  key={mode}
-                  onClick={() => setDrawMode(mode)} 
-                  className={`px-4 py-1.5 text-xs font-black rounded-xl transition-all ${drawMode === mode ? 'bg-white shadow-sm text-indigo-600 border border-indigo-50' : 'text-slate-400 hover:text-slate-600'}`}
-                >
-                  {mode === 'random' ? '絕對亂數' : mode === 'logical' ? '合理情境' : '指定句型'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="h-6 w-px bg-slate-200" />
-
-          <button onClick={() => setShowDataEditor(true)} className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-all text-slate-600" title="自定義資料">
-            <Layout size={20} />
-          </button>
-
-          <button onClick={() => setShowSettings(!showSettings)} className={`p-2.5 rounded-xl transition-all ${showSettings ? 'bg-indigo-100 text-indigo-600 rotate-90 shadow-md' : 'bg-white border hover:bg-slate-50'}`}>
-            <Settings size={20} />
-          </button>
-          
-          <button onClick={handleDrawAll} disabled={isAiDrawing} className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white px-6 py-2.5 rounded-2xl font-black shadow-lg shadow-indigo-100 transition-all flex items-center gap-2 active:scale-95">
-            {isAiDrawing ? <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" /> : <ListRestart size={20} />}
-            一鍵全抽
-          </button>
-        </div>
-      </header>
-
-      {drawMode === 'pattern' && (
-        <div className="bg-indigo-50 border-b px-6 py-2 flex items-center gap-4 animate-in slide-in-from-top-2">
-          <div className="flex items-center gap-2 text-indigo-700 whitespace-nowrap">
-            <Type size={16} />
-            <span className="text-xs font-black">指定句型：</span>
-          </div>
-          <input 
-            type="text" 
-            placeholder="例如：一邊…一邊…/雖然…但是…/（主詞）（時間）都會（動詞）" 
-            className="flex-1 bg-white border-2 border-indigo-200 rounded-xl px-4 py-1.5 text-sm font-bold focus:outline-none focus:border-indigo-400 placeholder:text-slate-300 transition-all"
-            value={sentencePattern}
-            onChange={(e) => setSentencePattern(e.target.value)}
-          />
-        </div>
-      )}
-
-      {showSettings && (
-        <div className="absolute top-16 right-6 w-96 bg-white border-2 border-slate-100 shadow-2xl rounded-[2.5rem] p-6 z-50 animate-in slide-in-from-right-4">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="font-black text-xl">工具箱設定</h3>
-            <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-600">✕</button>
-          </div>
-          
-          <div className="space-y-6">
-            {/* API 金鑰輸入框 */}
-            <div className="p-4 bg-indigo-50 rounded-3xl border border-indigo-100">
-              <span className="font-black block text-indigo-900 text-sm mb-2">Gemini API 金鑰</span>
-              <input 
-                type="password" 
-                placeholder="在此貼上您的 API 金鑰..." 
-                className="w-full bg-white border-2 border-indigo-200 rounded-xl px-4 py-2 text-xs font-bold focus:outline-none focus:border-indigo-400"
-                value={userApiKey}
-                onChange={(e) => setUserApiKey(e.target.value)}
-              />
-              <p className="text-[10px] text-indigo-400 mt-2">※ 金鑰將僅儲存在您的瀏覽器儲存空間中。</p>
-            </div>
-
-            <label className="flex items-center justify-between p-4 bg-slate-50 rounded-3xl cursor-pointer">
-              <div>
-                <span className="font-black block text-slate-800">允許重複抽出</span>
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Duplicate allowed</span>
-              </div>
-              <input type="checkbox" checked={allowRepeat} onChange={() => setAllowRepeat(!allowRepeat)} className="w-6 h-6 rounded-lg text-indigo-600" />
-            </label>
-
-            <div>
-              <span className="font-black block mb-3 text-slate-800 px-1 text-sm uppercase tracking-wider">顯示卡片類型</span>
-              <div className="grid grid-cols-2 gap-2 max-h-[25vh] overflow-y-auto p-2 border-2 border-slate-50 rounded-3xl bg-slate-50/50">
-                {Object.keys(dataStore).map(cat => (
-                  <label key={cat} className={`flex items-center gap-2 p-3 rounded-2xl cursor-pointer transition-all border ${visibleCategories.includes(cat) ? 'bg-white border-indigo-200 text-indigo-700 shadow-sm' : 'bg-transparent border-transparent text-slate-400 opacity-60'}`}>
-                    <input type="checkbox" className="rounded text-indigo-600" checked={visibleCategories.includes(cat)} onChange={(e) => {
-                      if (e.target.checked) setVisibleCategories([...visibleCategories, cat]);
-                      else if (visibleCategories.length > 1) setVisibleCategories(visibleCategories.filter(v => v !== cat));
-                    }} />
-                    <span className="text-xs font-black">{cat}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showDataEditor && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[60] flex items-center justify-center p-6">
-          <div className="bg-white w-full max-w-5xl h-[85vh] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in">
-            <div className="p-8 border-b flex justify-between items-center bg-slate-50">
-              <div className="flex items-center gap-4">
-                <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg"><Edit3 size={24} /></div>
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900">自定義內容管理</h2>
-                  <p className="text-xs font-bold text-slate-400">增減卡片類型與語詞內容</p>
-                </div>
-              </div>
-              <button onClick={() => {setShowDataEditor(false); setEditingCategory(null);}} className="text-slate-400 hover:text-slate-600 p-2 bg-white border rounded-full transition-colors">✕</button>
-            </div>
+        function App() {
+            const [dataStore, setDataStore] = useState(() => Object.entries(INITIAL_RAW_DATA).reduce((acc, [key, value]) => { acc[key] = [...new Set(value.split('##'))]; return acc; }, {}));
+            const [visibleCategories, setVisibleCategories] = useState(["什麼人物", "什麼時間", "什麼地點", "什麼動作", "什麼事情", "什麼物品"]);
+            const [currentResults, setCurrentResults] = useState({}); 
+            const [histories, setHistories] = useState(Object.keys(INITIAL_RAW_DATA).reduce((acc, k) => ({...acc, [k]: []}), {}));
+            const [allowRepeat, setAllowRepeat] = useState(false);
+            const [drawMode, setDrawMode] = useState('random'); 
+            const [sentencePattern, setSentencePattern] = useState(""); 
+            const [userApiKey, setUserApiKey] = useState(localStorage.getItem('gemini_api_key') || "");
             
-            <div className="flex-1 flex overflow-hidden">
-              <div className="w-1/3 border-r overflow-y-auto p-6 space-y-2">
-                <button onClick={handleAddCategory} className="w-full p-4 border-2 border-dashed border-indigo-200 text-indigo-600 rounded-3xl font-black flex items-center justify-center gap-2 hover:bg-indigo-50 transition-all mb-4">
-                  <Plus size={20} /> 新增類型
-                </button>
-                {Object.keys(dataStore).map(cat => (
-                  <div key={cat} className={`group flex items-center justify-between p-4 rounded-3xl border-2 transition-all cursor-pointer ${editingCategory === cat ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl' : 'bg-white border-slate-50 hover:border-indigo-100 text-slate-700'}`} onClick={() => setEditingCategory(cat)}>
-                    <span className="font-bold">{cat}</span>
-                    <button onClick={(e) => { e.stopPropagation(); handleRemoveCategory(cat); }} className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white rounded-lg transition-all"><Trash2 size={14} /></button>
-                  </div>
-                ))}
-              </div>
-              <div className="flex-1 bg-slate-50 p-8">
-                {editingCategory ? (
-                  <div className="h-full flex flex-col">
-                    <h4 className="font-black text-slate-900 mb-4 flex items-center gap-2 text-lg">
-                      編輯中：<span className="text-indigo-600">{editingCategory}</span>
-                    </h4>
-                    <textarea 
-                      className="flex-1 w-full bg-white border-2 border-slate-200 rounded-[2rem] p-6 font-bold text-lg focus:outline-none focus:border-indigo-400 resize-none shadow-inner leading-relaxed"
-                      placeholder="每行輸入一個語詞..."
-                      value={(dataStore[editingCategory] || []).join('\n')}
-                      onChange={(e) => handleUpdateWords(editingCategory, e.target.value)}
-                    />
-                  </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-50">
-                    <Edit3 size={64} className="mb-4" />
-                    <p className="font-black text-xl">請從左側選擇要編輯的類型</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+            const [showHistoryModal, setShowHistoryModal] = useState(null); 
+            const [showSettings, setShowSettings] = useState(false);
+            const [showDataEditor, setShowDataEditor] = useState(false); 
+            const [editingCategory, setEditingCategory] = useState(null); 
+            const [isAiLoading, setIsAiLoading] = useState(false);
+            const [isAiDrawing, setIsAiDrawing] = useState(false);
+            const [aiSentence, setAiSentence] = useState("");
+            const [isInstructorOpen, setIsInstructorOpen] = useState(false);
+            const [showHelpTooltip, setShowHelpTooltip] = useState(false);
 
-      {/* 主展示區 */}
-      <main className="flex-1 p-6 flex flex-col items-center justify-center min-h-0">
-        <div className={`grid ${cardGridClass} gap-4 w-full h-full max-w-[1600px]`}>
-          {visibleCategories.map((cat) => (
-            <div key={cat} className={`group relative flex flex-col rounded-[2.5rem] border-4 shadow-2xl overflow-hidden transition-all duration-300 ${currentResults[cat] ? 'scale-100' : 'opacity-40 scale-95'} ${COLOR_MAP[cat] || 'bg-white border-slate-200'}`}>
-              <div className="px-5 py-3 flex justify-between items-center bg-black/5">
-                <span className="text-[10px] font-black uppercase tracking-widest opacity-60 font-mono tracking-tighter">{cat}</span>
-                <div className="flex gap-1">
-                  <button onClick={() => setShowHistoryModal(cat)} className="p-1.5 hover:bg-black/10 rounded-xl transition-colors"><History size={14} /></button>
-                  <button onClick={() => resetCategory(cat)} className="p-1.5 hover:bg-black/10 rounded-xl transition-colors"><RotateCcw size={14} /></button>
+            useEffect(() => { localStorage.setItem('gemini_api_key', userApiKey); }, [userApiKey]);
+
+            const isExhausted = (category) => !allowRepeat && histories[category]?.length >= dataStore[category]?.length && dataStore[category]?.length > 0;
+
+            const drawSingle = (category) => {
+                const pool = dataStore[category] || [];
+                const history = histories[category] || [];
+                let available = allowRepeat ? pool : pool.filter(item => !history.includes(item));
+                if (available.length === 0) return null;
+                const result = available[Math.floor(Math.random() * available.length)];
+                setCurrentResults(prev => ({ ...prev, [category]: result }));
+                setHistories(prev => ({ ...prev, [category]: [...(prev[category] || []), result] }));
+                return result;
+            };
+
+            const resetCategory = (category) => {
+                setHistories(prev => ({ ...prev, [category]: [] }));
+                setCurrentResults(prev => { const n = {...prev}; delete n[category]; return n; });
+            };
+
+            const handleDrawAll = async () => {
+                if (drawMode === 'random') {
+                    visibleCategories.forEach(k => drawSingle(k));
+                } else {
+                    if (!userApiKey) { setAiSentence("請點擊設定（⚙️）填寫 API 金鑰。"); setIsInstructorOpen(true); return; }
+                    setIsAiDrawing(true);
+                    try {
+                        const activeKeys = visibleCategories;
+                        const isPattern = drawMode === 'pattern' && sentencePattern.trim();
+                        const systemPrompt = `資深老師選詞。JSON：{"標籤": "詞彙"}。${isPattern ? `考量句型「${sentencePattern}」` : ''}`;
+                        const userPrompt = `各類選一：${activeKeys.map(k => `${k}: [${dataStore[k].slice(0,15).join(', ')}]`).join('\n')}`;
+                        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${userApiKey}`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] }, generationConfig: { responseMimeType: "application/json" } })
+                        });
+                        const data = await response.json();
+                        const result = JSON.parse(data.candidates[0].content.parts[0].text);
+                        const newResults = { ...currentResults };
+                        activeKeys.forEach(k => { if (result[k]) newResults[k] = result[k]; else drawSingle(k); });
+                        setCurrentResults(newResults);
+                    } catch (e) { visibleCategories.forEach(k => drawSingle(k)); } finally { setIsAiDrawing(false); }
+                }
+            };
+
+            const generateSentence = async () => {
+                if (!userApiKey) { setAiSentence("請至設定（⚙️）填寫金鑰。"); setIsInstructorOpen(true); return; }
+                setIsAiLoading(true); setAiSentence(""); setIsInstructorOpen(true);
+                try {
+                    const words = Object.entries(currentResults).filter(([k]) => visibleCategories.includes(k)).map(([k,v]) => `${k}: ${v}`).join(', ');
+                    const isPattern = drawMode === 'pattern' && sentencePattern.trim();
+                    const prompt = `用語詞「${words}」造生活化句子。禁用 ** 或 __ 標示語詞。${isPattern ? `使用句型：「${sentencePattern}」。` : ''}`;
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${userApiKey}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    const data = await response.json();
+                    setAiSentence(data.candidates[0].content.parts[0].text);
+                } catch (e) { setAiSentence("造句失敗，請確認 API 金鑰。"); } finally { setIsAiLoading(false); }
+            };
+
+            const renderHighlightedSentence = (sentence) => {
+                if (!sentence) return null;
+                const clean = sentence.replace(/[\*_`]/g, '');
+                const keywords = visibleCategories.map(cat => currentResults[cat]).filter(Boolean).sort((a,b) => b.length - a.length);
+                if (keywords.length === 0) return clean;
+                const regex = new RegExp(`(${keywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g');
+                return clean.split(regex).map((part, i) => keywords.includes(part) ? <span key={i} className="text-indigo-600 underline underline-offset-4 decoration-indigo-300 decoration-2 font-black mx-1 inline-block">{part}</span> : part);
+            };
+
+            const gridClass = useMemo(() => {
+                const c = visibleCategories.length;
+                if (c <= 4) return "grid-cols-1 sm:grid-cols-2";
+                if (c <= 6) return "grid-cols-2 sm:grid-cols-3";
+                return "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5";
+            }, [visibleCategories]);
+
+            return (
+                <div className="flex flex-col h-screen overflow-hidden">
+                    <header className="bg-white border-b px-6 py-3 flex items-center justify-between shadow-sm z-30 shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-indigo-600 p-2 rounded-2xl text-white shadow-xl"><Icon name="BookOpen" size={24} /></div>
+                            <div><h1 className="text-xl font-black text-slate-900 mb-1">造句靈感抽卡器</h1><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Creative Sentences Lab</p></div>
+                            <div className="relative ml-2 tooltip-trigger"><button className="p-1 text-slate-300 hover:text-indigo-500"><Icon name="HelpCircle" size={20} /></button>
+                                <div className="absolute top-10 left-0 w-72 bg-slate-800 text-white p-5 rounded-2xl text-xs z-[100] shadow-2xl border border-slate-700 pointer-events-none tooltip-box">
+                                    <h4 className="font-black mb-3 border-b border-slate-600 pb-2">工具使用說明</h4>
+                                    <ul className="space-y-2 opacity-90">
+                                        <li>1. 點擊「DRAW」單抽。</li>
+                                        <li>2. 「一鍵全抽」快速抽取。</li>
+                                        <li>3. 「指定句型」模式可限制語法。</li>
+                                        <li>4. 點擊「⚙️」設定重複機制與填寫 API 金鑰。</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="hidden lg:flex items-center gap-3 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 shadow-inner">
+                                <span className="text-[10px] font-black text-slate-400 uppercase ml-2">抽卡模式</span>
+                                <div className="flex gap-1">
+                                    {['random', 'logical', 'pattern'].map(m => (
+                                        <button key={m} onClick={() => setDrawMode(m)} className={`px-4 py-1.5 text-xs font-black rounded-xl transition-all ${drawMode === m ? 'bg-white shadow-sm text-indigo-600 border border-indigo-50' : 'text-slate-400'}`}>
+                                            {m === 'random' ? '絕對亂數' : m === 'logical' ? '合理情境' : '指定句型'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <button onClick={() => setShowDataEditor(true)} className="p-2.5 bg-slate-50 border rounded-xl hover:bg-slate-100 text-slate-600"><Icon name="Layout" size={20} /></button>
+                            <button onClick={() => setShowSettings(!showSettings)} className={`p-2.5 rounded-xl transition-all bg-white border ${showSettings ? 'bg-indigo-50 text-indigo-600' : ''}`}><Icon name="Settings" size={20} /></button>
+                            <button onClick={handleDrawAll} disabled={isAiDrawing} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-2xl font-black shadow-lg flex items-center gap-2 active:scale-95">
+                                {isAiDrawing ? <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" /> : <Icon name="ListRestart" size={20} />} 一鍵全抽
+                            </button>
+                        </div>
+                    </header>
+
+                    {drawMode === 'pattern' && (
+                        <div className="bg-indigo-50 border-b px-6 py-2 flex items-center gap-4 animate-in">
+                            <Icon name="Type" size={16} className="text-indigo-700" />
+                            <input type="text" placeholder="例如：一邊…一邊…/雖然…但是…/（主詞）（時間）都會（動詞）" className="flex-1 bg-white border-2 border-indigo-200 rounded-xl px-4 py-1.5 text-sm font-bold focus:outline-none focus:border-indigo-400" value={sentencePattern} onChange={e => setSentencePattern(e.target.value)} />
+                        </div>
+                    ) }
+
+                    {showSettings && (
+                        <div className="absolute top-16 right-6 w-96 bg-white border-2 shadow-2xl rounded-[2.5rem] p-6 z-50 animate-in">
+                            <div className="flex justify-between items-center mb-6"><h3 className="font-black text-xl text-slate-900">系統設定</h3><button onClick={() => setShowSettings(false)} className="text-slate-400"><Icon name="X" size={20} /></button></div>
+                            <div className="space-y-6">
+                                <div className="p-4 bg-indigo-50 rounded-3xl border border-indigo-100">
+                                    <span className="font-black block text-indigo-900 text-sm mb-2">Gemini API 金鑰（必填）</span>
+                                    <input type="password" placeholder="貼上您的 API 金鑰..." className="w-full bg-white border-2 border-indigo-200 rounded-xl px-4 py-2 text-xs font-bold focus:outline-none shadow-inner" value={userApiKey} onChange={e => setUserApiKey(e.target.value)} />
+                                    <p className="text-[10px] text-indigo-400 mt-2 font-bold italic">※ 金鑰僅儲存於您的瀏覽器中。</p>
+                                </div>
+                                <label className="flex items-center justify-between p-4 bg-slate-50 rounded-3xl cursor-pointer">
+                                    <span className="font-black block text-slate-800">允許重複抽出</span>
+                                    <input type="checkbox" checked={allowRepeat} onChange={() => setAllowRepeat(!allowRepeat)} className="w-6 h-6 rounded-lg text-indigo-600" />
+                                </label>
+                                <div><span className="font-black block mb-3 text-slate-800 text-sm font-black">顯示卡片類型</span>
+                                    <div className="grid grid-cols-2 gap-2 max-h-[25vh] overflow-y-auto p-2 border-2 border-slate-50 rounded-3xl bg-slate-50/50">
+                                        {Object.keys(dataStore).map(cat => (
+                                            <label key={cat} className={`flex items-center gap-2 p-3 rounded-2xl cursor-pointer border ${visibleCategories.includes(cat) ? 'bg-white border-indigo-200 text-indigo-700 shadow-sm' : 'bg-transparent text-slate-400 opacity-60'}`}>
+                                                <input type="checkbox" checked={visibleCategories.includes(cat)} onChange={e => { if (e.target.checked) setVisibleCategories([...visibleCategories, cat]); else if (visibleCategories.length > 1) setVisibleCategories(visibleCategories.filter(v => v !== cat)); }} />
+                                                <span className="text-xs font-black">{cat}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {showDataEditor && (
+                        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[60] flex items-center justify-center p-6">
+                            <div className="bg-white w-full max-w-5xl h-[85vh] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-in">
+                                <div className="p-8 border-b flex justify-between items-center bg-slate-50">
+                                    <div className="flex items-center gap-4"><div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg"><Icon name="Edit3" size={24} /></div><div><h2 className="text-2xl font-black text-slate-900">自定義內容管理</h2><p className="text-xs font-bold text-slate-400">增減類型與語詞庫</p></div></div>
+                                    <button onClick={() => {setShowDataEditor(false); setEditingCategory(null);}} className="p-2 border rounded-full hover:bg-slate-200 transition-colors"><Icon name="X" size={20}/></button>
+                                </div>
+                                <div className="flex-1 flex overflow-hidden">
+                                    <div className="w-1/3 border-r overflow-y-auto p-6 bg-slate-50/50 space-y-2">
+                                        <button onClick={() => { const n = window.prompt("新類型名稱："); if (n && !dataStore[n]) { setDataStore({...dataStore, [n]:[]}); setHistories({...histories, [n]:[]}); setVisibleCategories([...visibleCategories, n]); } }} className="w-full p-4 border-2 border-dashed border-indigo-200 text-indigo-600 rounded-3xl font-black flex items-center justify-center gap-2 hover:bg-white transition-all mb-4"><Icon name="Plus" size={20} /> 新增類型</button>
+                                        {Object.keys(dataStore).map(cat => (
+                                            <div key={cat} className={`group flex items-center justify-between p-4 rounded-3xl border-2 transition-all cursor-pointer ${editingCategory === cat ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl' : 'bg-white hover:border-indigo-100'}`} onClick={() => setEditingCategory(cat)}><span className="font-bold">{cat}</span>
+                                                <button onClick={(e) => { e.stopPropagation(); if(window.confirm(`確定刪除 ${cat} 嗎？`)) { const next = {...dataStore}; delete next[cat]; setDataStore(next); setVisibleCategories(visibleCategories.filter(v => v !== cat)); } }} className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-500 rounded-lg text-slate-400 hover:text-white transition-all"><Icon name="Trash2" size={14}/></button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex-1 bg-white p-8">
+                                        {editingCategory ? (
+                                            <div className="h-full flex flex-col animate-in"><h4 className="font-black text-slate-900 mb-4 text-lg">正在編輯：<span className="text-indigo-600">{editingCategory}</span></h4><textarea className="flex-1 w-full bg-slate-50 border-2 rounded-[2rem] p-6 font-bold text-lg focus:outline-none focus:border-indigo-400 resize-none shadow-inner leading-relaxed" placeholder="每行一語詞..." value={(dataStore[editingCategory] || []).join('\n')} onChange={e => { const words = [...new Set(e.target.value.split('\n').map(s => s.trim()).filter(s => s))]; setDataStore({...dataStore, [editingCategory]: words}); }} /></div>
+                                        ) : <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-50"><Icon name="Edit3" size={64} /><p className="font-black text-xl mt-4 font-black">選擇類型開始編輯</p></div>}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <main className="flex-1 p-6 flex items-center justify-center min-h-0 overflow-y-auto">
+                        <div className={`grid ${gridClass} gap-4 w-full h-full max-w-[1600px]`}>
+                            {visibleCategories.map(cat => (
+                                <div key={cat} className={`relative flex flex-col rounded-[2.5rem] border-4 shadow-2xl overflow-hidden transition-all duration-300 ${currentResults[cat] ? 'scale-100' : 'opacity-40 scale-95'} ${COLOR_MAP[cat] || 'bg-white border-slate-200'}`}>
+                                    <div className="px-5 py-3 flex justify-between bg-black/5 items-center"><span className="text-[10px] font-black uppercase tracking-wider font-mono">{cat}</span>
+                                        <div className="flex gap-2"><button onClick={() => setShowHistoryModal(cat)}><Icon name="History" size={14}/></button><button onClick={() => resetCategory(cat)}><Icon name="RotateCcw" size={14}/></button></div>
+                                    </div>
+                                    <div className="flex-1 flex items-center justify-center p-6 text-center min-h-0">{currentResults[cat] ? <div className="text-xl sm:text-2xl font-black text-slate-900 animate-in drop-shadow-sm leading-tight">{currentResults[cat]}</div> : <div className="text-slate-400 text-[10px] tracking-[0.3em] opacity-20 italic font-black uppercase font-mono">READY</div>}</div>
+                                    <button onClick={() => drawSingle(cat)} disabled={isExhausted(cat)} className="py-5 text-xs font-black bg-black/5 hover:bg-black/10 active:scale-95 disabled:opacity-50 uppercase font-mono tracking-widest">{isExhausted(cat) ? "Empty" : "DRAW"}</button>
+                                </div>
+                            ))}
+                        </div>
+                    </main>
+
+                    {/* 造句指導員 */}
+                    <section className={`fixed bottom-0 left-0 right-0 bg-white border-t-2 shadow-2xl transition-all duration-500 z-40 ${isInstructorOpen ? 'translate-y-0' : 'translate-y-[calc(100%-48px)]'}`}>
+                        <button onClick={() => setIsInstructorOpen(!isInstructorOpen)} className="w-full h-12 flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 transition-colors border-b">
+                            {isInstructorOpen ? <Icon name="ChevronDown" size={16}/> : <Icon name="ChevronUp" size={16}/>}
+                            <Icon name="Sparkles" size={16} className="text-indigo-600" /> <span className="text-xs font-black text-slate-500 tracking-widest uppercase font-black">造句指導員</span>
+                        </button>
+                        <div className="p-8 md:px-16 max-w-7xl mx-auto flex flex-col md:flex-row gap-8 items-center">
+                            <div className="flex-1 w-full bg-indigo-50 border-4 border-dashed border-indigo-100 rounded-[2.5rem] p-8 flex items-center justify-center text-center shadow-inner min-h-[120px]">
+                                {isAiLoading ? <div className="animate-pulse font-black text-indigo-500">正在為您構思精采內容...</div> : <div className="text-xl md:text-3xl font-bold font-serif tracking-wide leading-relaxed">{aiSentence ? <span>「 {renderHighlightedSentence(aiSentence)} 」</span> : "準備就緒，點擊右側按鈕造句"}</div>}
+                            </div>
+                            <button onClick={generateSentence} disabled={isAiLoading || !Object.keys(currentResults).length} className="bg-slate-900 text-white px-12 py-8 rounded-[2rem] font-black flex flex-col items-center gap-3 active:scale-95 transition-all disabled:bg-slate-200">
+                                <div className="bg-indigo-500 p-3 rounded-2xl shadow-lg transition-transform hover:scale-110"><Icon name="Sparkles" size={28} /></div><span className="text-xs tracking-widest uppercase font-black">生成句子</span>
+                            </button>
+                        </div>
+                    </section>
+
+                    {showHistoryModal && (
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-6" onClick={() => setShowHistoryModal(null)}>
+                            <div className="bg-white w-full max-w-md rounded-[3rem] overflow-hidden animate-in shadow-2xl" onClick={e => e.stopPropagation()}>
+                                <div className={`p-6 text-center font-black text-xl flex justify-between items-center ${COLOR_MAP[showHistoryModal] || 'bg-slate-200'}`}>
+                                    <div className="flex items-center gap-3"><Icon name="History" size={24} /> <span>抽卡紀錄</span></div><button onClick={() => setShowHistoryModal(null)} className="hover:rotate-90 transition-transform"><Icon name="X" size={20}/></button>
+                                </div>
+                                <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto bg-slate-50">
+                                    {(histories[showHistoryModal] || []).length > 0 ? histories[showHistoryModal].map((v, i) => (
+                                        <div key={i} className="flex items-center gap-4 p-4 bg-white rounded-2xl border-2 border-slate-100 shadow-sm"><span className="w-8 h-8 rounded-full bg-slate-900 text-white text-xs font-black flex items-center justify-center shrink-0">{(i+1).toString().padStart(2, '0')}</span><span className="font-bold text-lg">{v}</span></div>
+                                    )) : <div className="text-center py-10 opacity-30 font-black uppercase">尚無紀錄</div>}
+                                </div>
+                                <div className="p-4 bg-white border-t flex justify-center"><button onClick={() => setShowHistoryModal(null)} className="px-10 py-2 bg-slate-900 text-white rounded-full font-black text-sm active:scale-95 shadow-md">關閉</button></div>
+                            </div>
+                        </div>
+                    )}
                 </div>
-              </div>
-              <div className="flex-1 flex items-center justify-center p-6 text-center min-h-0">
-                {currentResults[cat] ? (
-                  <div className={`${cardFontSize} font-black tracking-normal leading-tight text-slate-900 animate-in zoom-in duration-300 drop-shadow-sm`}>
-                    {currentResults[cat]}
-                  </div>
-                ) : (
-                  <div className="text-slate-400 font-black opacity-20 italic text-[10px] tracking-[0.3em] uppercase">READY</div>
-                )}
-              </div>
-              <button 
-                onClick={() => drawSingle(cat)} 
-                disabled={isExhausted(cat)} 
-                className={`py-5 text-xs font-black tracking-[0.3em] transition-all uppercase ${isExhausted(cat) ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-black/10 hover:bg-black/20 text-inherit active:scale-95'}`}
-              >
-                {isExhausted(cat) ? "Empty" : "DRAW"}
-              </button>
-              {!allowRepeat && (
-                <div className="absolute top-3 right-14 text-[9px] bg-black/10 px-2 py-0.5 rounded-full font-black">
-                  {(histories[cat] || []).length}/{(dataStore[cat] || []).length}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </main>
+            );
+        }
 
-      <section className={`fixed bottom-0 left-0 right-0 bg-white border-t-2 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 z-40 ${isInstructorOpen ? 'translate-y-0' : 'translate-y-[calc(100%-48px)]'}`}>
-        <button onClick={() => setIsInstructorOpen(!isInstructorOpen)} className="w-full h-12 flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 border-b transition-colors group">
-          {isInstructorOpen ? <ChevronDown className="text-slate-400 group-hover:text-indigo-500" /> : <ChevronUp className="text-slate-400 group-hover:text-indigo-500" />}
-          <Sparkles size={16} className="text-indigo-600" />
-          <span className="text-xs font-black text-slate-500 tracking-widest uppercase">造句指導員</span>
-        </button>
-        <div className="p-8 md:px-16 max-w-7xl mx-auto flex flex-col md:flex-row gap-8 items-center">
-          <div className="flex-1 w-full">
-            <div className={`w-full min-h-[120px] p-8 rounded-[2.5rem] border-4 border-dashed flex items-center justify-center text-center transition-all ${aiSentence ? 'bg-indigo-50 border-indigo-100 shadow-inner' : 'bg-slate-50 border-slate-100'}`}>
-              {isAiLoading ? (
-                <div className="flex items-center gap-4 text-indigo-500 font-black animate-pulse">正在為您構思精采內容...</div>
-              ) : aiSentence ? (
-                <p className="text-xl md:text-3xl font-bold text-slate-800 leading-relaxed font-serif tracking-wide">
-                  「{renderHighlightedSentence(aiSentence)}」
-                </p>
-              ) : (
-                <div className="flex flex-col items-center gap-2 opacity-30"><Maximize2 size={32} /><p className="text-sm font-black uppercase tracking-widest">造句指導員準備就緒</p></div>
-              )}
-            </div>
-          </div>
-          <button onClick={generateSentence} disabled={isAiLoading || Object.keys(currentResults).length === 0} className="w-full md:w-auto bg-slate-900 hover:bg-black disabled:bg-slate-200 text-white px-12 py-8 rounded-[2rem] font-black flex flex-col items-center gap-3 transition-all shadow-2xl active:scale-95 shrink-0 group">
-            <div className="bg-indigo-500 p-3 rounded-2xl group-hover:scale-110 transition-transform shadow-lg shadow-indigo-500/30"><Sparkles size={28} /></div>
-            <span className="text-xs uppercase tracking-widest">生成句子</span>
-          </button>
-        </div>
-      </section>
-
-      {showHistoryModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
-          <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-in zoom-in">
-            <div className={`p-6 text-center font-black text-xl flex justify-between items-center ${COLOR_MAP[showHistoryModal] || 'bg-slate-100'}`}>
-              <div className="flex items-center gap-3"><History size={24} /> <span>抽卡歷史紀錄</span></div>
-              <button onClick={() => setShowHistoryModal(null)} className="p-2 hover:bg-black/10 rounded-full transition-colors">✕</button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-slate-50">
-              {(histories[showHistoryModal] || []).length > 0 ? (
-                histories[showHistoryModal].map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-4 p-4 bg-white rounded-2xl border-2 border-slate-100 shadow-sm transition-transform hover:scale-[1.02]">
-                    <span className="flex-none w-10 h-10 rounded-full bg-slate-900 text-white text-xs font-black flex items-center justify-center shadow-md">{(idx + 1).toString().padStart(2, '0')}</span>
-                    <span className="text-lg font-bold text-slate-800">{item}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-20 opacity-20 font-black uppercase text-xl">No Records</div>
-              )}
-            </div>
-            <div className="p-6 bg-white border-t flex justify-center">
-              <button onClick={() => setShowHistoryModal(null)} className="px-12 py-3 bg-slate-900 text-white rounded-2xl font-black text-lg active:scale-95 transition-all">關閉</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes slide-in-from-right { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes slide-in-from-top { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        @keyframes zoom-in { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-        .animate-in { animation: 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
-        .slide-in-from-right-4 { animation-name: slide-in-from-right; }
-        .slide-in-from-top-2 { animation-name: slide-in-from-top; }
-        .zoom-in { animation-name: zoom-in; }
-        .fade-in { animation-name: fade-in; }
-      `}</style>
-    </div>
-  );
-}
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
